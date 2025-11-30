@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BRHIFACE — Tienda Editable Completa</title>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <style>
+    :root{--rosa:#ff5fa8;--rosa-dark:#ff2d88;--bg:#f6f6f8;--card:#fff;--muted:#666}
+    *{box-sizing:border-box}
+    body{font-family:Inter, Arial, sans-serif;margin:0;background:linear-gradient(180deg,var(--bg),#fff)}
+    .wrap{max-width:1200px;margin:18px auto;padding:0 16px}
+    header{background:linear-gradient(90deg,var(--rosa),var(--rosa-dark));color:#fff;padding:14px;border-radius:10px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:10px;background:#fff;color:var(--rosa-dark);display:grid;place-items:center;font-weight:800}
+    .topline{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .search{flex:1;margin:0 16px}
+    input.search{width:100%;padding:10px;border-radius:8px;border:0}
+
+    .main{display:grid;grid-template-columns:280px 1fr;gap:16px;margin-top:18px}
+    @media(max-width:960px){.main{grid-template-columns:1fr}.sidebar{order:2}}
+
+    .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.05)}
+    .sidebar .section{margin-bottom:12px}
+    .filter-row{display:flex;gap:8px;align-items:center}
+
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    @media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:700px){.grid{grid-template-columns:1fr}}
+
+    .product{border-radius:8px;overflow:hidden}
+    .product .img{height:200px;background:#eee;display:grid;place-items:center}
+    .product .body{padding:10px}
+    .price{font-weight:800;color:var(--rosa-dark)}
+    .muted{color:var(--muted);font-size:13px}
+
+    .btn{background:var(--rosa-dark);color:#fff;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--rosa-dark);border:1px solid #eee}
+
+    /* CART PANEL */
+    .cart-floating{position:fixed;right:18px;bottom:18px;width:340px;max-height:80vh;display:flex;flex-direction:column}
+    .cart-panel{display:none;flex-direction:column;background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,0.12);overflow:auto}
+    .cart-header{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #f1f1f1}
+    .cart-list{padding:12px}
+    .cart-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed #eee}
+
+    /* ADMIN PANEL */
+    .admin-controls{display:flex;gap:8px;flex-wrap:wrap}
+    .small{font-size:13px;color:var(--muted)}
+    footer{margin-top:18px;padding:12px;text-align:center;color:var(--muted)}
+
+    /* responsive small tweaks */
+    @media(max-width:480px){.search{display:none}.logo{width:44px;height:44px}}
+  </style>
+</head>
+<body>
+  <header class="wrap card">
+    <div class="topline">
+      <div class="brand">
+        <div class="logo">BF</div>
+        <div>
+          <div style="font-weight:800;font-size:18px">BRHIFACE</div>
+          <div class="small">Tienda editable · Rosado y blanco</div>
+        </div>
+      </div>
+
+      <div class="search">
+        <input id="globalSearch" class="search" placeholder="Buscar productos, marcas o categorías" oninput="applySearch()" />
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="small">Visitas: <strong id="visCount">0</strong></div>
+        <button class="btn" onclick="toggleCart()">Carrito (<span id="cartCount">0</span>)</button>
+        <button class="btn ghost" onclick="openAdmin()">Panel Admin</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap main">
+    <!-- SIDEBAR: filtros y quick upload -->
+    <aside class="sidebar">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center"><strong>Agregar producto</strong></div>
+        <div style="margin-top:8px">
+          <input id="fileUpload" type="file" accept="image/*"><br>
+          <input id="nameInput" type="text" placeholder="Nombre del producto" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px solid #eee">
+          <input id="priceInput" type="number" placeholder="Precio (S/)" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px solid #eee">
+          <input id="stockInput" type="number" placeholder="Stock" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px solid #eee">
+          <select id="catInput" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px solid #eee">
+            <option value="">Categoría (opcional)</option>
+            <option>Ropa Mujer</option>
+            <option>Ropa Hombre</option>
+            <option>Calzado</option>
+            <option>Hogar</option>
+            <option>Belleza</option>
+          </select>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn" onclick="addProductFromSidebar()">Agregar</button>
+            <button class="btn ghost" onclick="loadSample()">Cargar demos</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <strong>Filtros</strong>
+        <div style="margin-top:8px">
+          <label class="small">Máx precio S/ <span id="priceVal">500</span></label>
+          <input id="priceRange" type="range" min="5" max="1000" value="500" oninput="document.getElementById('priceVal').textContent=this.value;applyFilters()">
+          <div style="margin-top:8px">
+            <select id="categoryFilter" onchange="applyFilters()"><option value="">Todas</option><option>Ropa Mujer</option><option>Calzado</option><option>Hogar</option><option>Belleza</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <strong>Compartir</strong>
+        <div style="margin-top:8px" class="small">QR de la tienda:</div>
+        <div id="qrStore" style="margin-top:8px"></div>
+        <div style="margin-top:8px"><button class="btn" onclick="downloadCatalog()">Exportar catálogo (.json)</button></div>
+      </div>
+    </aside>
+
+    <!-- PRODUCTOS -->
+    <section>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><strong>Productos</strong> · <span class="small" id="resultCount">0</span> resultados</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="sortBy" onchange="applyFilters()"><option value="relevance">Orden: Relevancia</option><option value="price-asc">Precio ↑</option><option value="price-desc">Precio ↓</option></select>
+            <button class="btn ghost" onclick="clearFilters()">Limpiar filtros</button>
+          </div>
+        </div>
+        <div style="margin-top:12px" id="productsGrid" class="grid"></div>
+      </div>
+
+      <div style="margin-top:12px" class="card">
+        <strong>Estadísticas rápidas</strong>
+        <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+          <div style="padding:10px;background:#fff;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.04)"><div class="small">Visitas</div><div id="visitorsNow" style="font-weight:800">0</div></div>
+          <div style="padding:10px;background:#fff;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.04)"><div class="small">Ventas</div><div id="salesToday" style="font-weight:800">0</div></div>
+          <div style="padding:10px;background:#fff;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.04)"><div class="small">Tasa conversión</div><div id="convRate" style="font-weight:800">0%</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- CARRITO FLOTANTE -->
+  <div class="cart-floating">
+    <div id="cartPanel" class="cart-panel card" aria-hidden="true">
+      <div class="cart-header">
+        <strong>Tu carrito</strong>
+        <div><button class="btn ghost" onclick="closeCart()">Cerrar</button></div>
+      </div>
+      <div id="cartList" class="cart-list"></div>
+      <div style="padding:12px;border-top:1px solid #f1f1f1">
+        <div style="display:flex;justify-content:space-between"><div class="small">Total</div><div id="cartTotal" style="font-weight:800">S/ 0.00</div></div>
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn" onclick="checkout()">Pagar (simulado)</button><button class="btn ghost" onclick="clearCart()">Vaciar</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN MODAL (simple) -->
+  <div id="adminModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;padding:24px">
+    <div style="max-width:900px;margin:auto;background:#fff;border-radius:12px;padding:18px;max-height:90vh;overflow:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center"><h3>Panel Admin</h3><div><button class="btn ghost" onclick="closeAdmin()">Cerrar</button></div></div>
+      <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px" class="card">
+          <strong>Resumen</strong>
+          <div style="margin-top:8px"><div class="small">Visitas totales: <strong id="statVisits">0</strong></div><div class="small">Ventas totales: <strong id="statSales">0</strong></div><div class="small">Productos: <strong id="statProducts">0</strong></div></div>
+          <div style="margin-top:8px"><button class="btn" onclick="exportData()">Exportar datos</button> <button class="btn ghost" onclick="importDataPrompt()">Importar JSON</button></div>
+        </div>
+        <div style="flex:2;min-width:320px" class="card">
+          <strong>Productos (editar masivo)</strong>
+          <div id="adminProductList" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="wrap small">© BRHIFACE — Tienda demo editable · Hecho para Zenia</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  /* ======= Estado y persistencia ======= */
+  const STORAGE_KEY = 'bhriface_store_v1';
+  let state = {
+    products: [], // {id,name,price,img,stock,cat,views,purchases}
+    cart: [], // {id,qty}
+    metrics: {visits: Math.floor(120 + Math.random()*400), sales:0}
+  };
+
+  function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); renderAll(); }
+  function loadState(){ const s = localStorage.getItem(STORAGE_KEY); if(s){ state = JSON.parse(s); } else { loadSample(); } }
+
+  /* ======= Productos: CRUD con imagenes desde PC (dataURL) ======= */
+  function addProductFromSidebar(){
+    const file = document.getElementById('fileUpload').files[0];
+    const name = document.getElementById('nameInput').value.trim();
+    const price = parseFloat(document.getElementById('priceInput').value) || 0;
+    const stock = parseInt(document.getElementById('stockInput').value) || 0;
+    const cat = document.getElementById('catInput').value || '';
+    if(!name){ alert('Ingresa nombre'); return; }
+
+    if(file){ const reader = new FileReader(); reader.onload = e => { pushProduct(name,price,stock,cat,e.target.result); clearInputs(); }; reader.readAsDataURL(file); }
+    else { pushProduct(name,price,stock,cat,''); clearInputs(); }
+  }
+  function pushProduct(name,price,stock,cat,img){ const id = Date.now() + Math.floor(Math.random()*999);
+    state.products.unshift({id,name,price,img,stock,cat:cat||'General',views:0,purchases:0}); saveState(); }
+  function clearInputs(){ document.getElementById('fileUpload').value=''; document.getElementById('nameInput').value=''; document.getElementById('priceInput').value=''; document.getElementById('stockInput').value=''; }
+
+  function editProductInline(id){ const p = state.products.find(x=>x.id===id); if(!p) return; const newName = prompt('Nombre',p.name); const newPrice = prompt('Precio S/',p.price); const newStock = prompt('Stock',p.stock); if(newName!==null) p.name=newName; if(newPrice!==null) p.price=parseFloat(newPrice)||p.price; if(newStock!==null) p.stock=parseInt(newStock)||p.stock; saveState(); }
+  function deleteProduct(id){ if(!confirm('Eliminar producto?')) return; state.products = state.products.filter(x=>x.id!==id); saveState(); }
+
+  function uploadImageForProduct(id){ const fileInput = document.createElement('input'); fileInput.type='file'; fileInput.accept='image/*'; fileInput.onchange = e=>{ const f=e.target.files[0]; const r=new FileReader(); r.onload = ev=>{ const p=state.products.find(x=>x.id===id); p.img=ev.target.result; saveState(); }; r.readAsDataURL(f); }; fileInput.click(); }
+
+  /* ======= Render productos y filtros ======= */
+  function renderProducts(list){ const grid=document.getElementById('productsGrid'); grid.innerHTML=''; list.forEach(p=>{
+    const el = document.createElement('div'); el.className='card product'; el.innerHTML = `
+      <div class="img"><img src="${p.img||'https://via.placeholder.com/600x400?text=Sin+imagen'}" style="width:100%;height:100%;object-fit:cover" onclick="viewProduct(${p.id})"></div>
+      <div class="body">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${p.name}</strong><div class="small">${p.cat}</div></div><div class="price">S/ ${Number(p.price).toFixed(2)}</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><div class="small">Stock: ${p.stock}</div>
+        <div style="display:flex;gap:6px"><button class="btn ghost" onclick="openShare(${p.id})">Compartir</button><button class="btn" onclick="addToCart(${p.id})">Añadir</button></div></div>
+        <div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end"><button class="btn ghost" onclick="editProductInline(${p.id})">Editar</button><button class="btn ghost" onclick="uploadImageForProduct(${p.id})">Cambiar foto</button><button class="btn ghost" onclick="deleteProduct(${p.id})">Eliminar</button></div>
+      </div>`;
+    grid.appendChild(el);
+  }); document.getElementById('resultCount').textContent = list.length; }
+
+  function applyFilters(){ const maxP = Number(document.getElementById('priceRange').value); const cat = document.getElementById('categoryFilter').value; const sort = document.getElementById('sortBy').value; let list = state.products.filter(p=>p.price<=maxP);
+    if(cat) list = list.filter(p=>p.cat===cat);
+    if(sort==='price-asc') list.sort((a,b)=>a.price-b.price);
+    if(sort==='price-desc') list.sort((a,b)=>b.price-a.price);
+    renderProducts(list);
+  }
+  function applySearch(){ const q=document.getElementById('globalSearch').value.trim().toLowerCase(); let list = state.products.filter(p=>p.name.toLowerCase().includes(q)||p.cat.toLowerCase().includes(q)); document.getElementById('resultCount').textContent = list.length; renderProducts(list); }
+  function clearFilters(){ document.getElementById('priceRange').value=1000; document.getElementById('categoryFilter').value=''; document.getElementById('globalSearch').value=''; renderAll(); }
+
+  /* ======= Carrito ======= */
+  function addToCart(id){ const p = state.products.find(x=>x.id===id); if(!p||p.stock<=0){ alert('Sin stock'); return; } const it = state.cart.find(x=>x.id===id); if(it){ if(it.qty < p.stock) it.qty++; else alert('No hay más stock'); } else state.cart.push({id,qty:1}); saveState(); openCart(); }
+  function changeQty(id,delta){ const it = state.cart.find(x=>x.id===id); if(!it) return; it.qty += delta; if(it.qty<=0) state.cart = state.cart.filter(x=>x.id!==id); saveState(); }
+  function clearCart(){ if(confirm('Vaciar carrito?')){ state.cart=[]; saveState(); } }
+  function checkout(){ if(state.cart.length===0){ alert('Carrito vacío'); return; } // simula pago
+    // decrement stock and increase purchases
+    state.cart.forEach(ci=>{ const p=state.products.find(x=>x.id===ci.id); if(p){ p.stock = Math.max(0,p.stock - ci.qty); p.purchases = (p.purchases||0) + ci.qty; state.metrics.sales++; } });
+    state.cart = []; saveState(); updateMetricsUI(); alert('Compra simulada registrada. Gracias!'); closeCart(); }
+
+  function openCart(){ document.getElementById('cartPanel').style.display='flex'; document.getElementById('cartPanel').setAttribute('aria-hidden','false'); renderCart(); }
+  function closeCart(){ document.getElementById('cartPanel').style.display='none'; document.getElementById('cartPanel').setAttribute('aria-hidden','true'); }
+  function toggleCart(){ const panel=document.getElementById('cartPanel'); if(panel.style.display==='flex') closeCart(); else openCart(); }
+
+  function renderCart(){ const list=document.getElementById('cartList'); list.innerHTML=''; let total=0; state.cart.forEach(ci=>{ const p=state.products.find(x=>x.id===ci.id); if(!p) return; total += p.price * ci.qty; const node = document.createElement('div'); node.className='cart-item'; node.innerHTML = `<img src="${p.img||'https://via.placeholder.com/100'}" style="width:64px;height:64px;object-fit:cover;border-radius:6px"><div style="flex:1"><div style="font-weight:700">${p.name}</div><div class="small">S/ ${p.price.toFixed(2)} · x${ci.qty}</div></div><div style="display:flex;flex-direction:column;gap:6px"><button class="btn ghost" onclick="changeQty(${ci.id},1)">+</button><button class="btn ghost" onclick="changeQty(${ci.id},-1)">-</button></div>`; list.appendChild(node); }); document.getElementById('cartTotal').textContent = 'S/ ' + total.toFixed(2); document.getElementById('cartCount').textContent = state.cart.reduce((s,i)=>s+i.qty,0); }
+
+  /* ======= Producto - compartir / view ======= */
+  function viewProduct(id){ const p = state.products.find(x=>x.id===id); if(!p) return; p.views = (p.views||0) + 1; saveState(); alert(`${p.name}
+Precio: S/ ${p.price.toFixed(2)}
+Stock: ${p.stock}`); }
+
+  function openShare(id){ const p = state.products.find(x=>x.id===id); if(!p) return; // genera QR y muestra modal simple
+    const url = location.href + '#product=' + id;
+    const win = window.open('', '_blank', 'width=360,height=520');
+    win.document.write(`<div style="font-family:Arial;padding:12px"><h3>${p.name}</h3><div id="qrd"></div><p>Precio: S/ ${p.price.toFixed(2)}</p><p><a href="${url}">Abrir producto</a></p></div>`);
+    new win.QRCode(win.document.getElementById('qrd'), {text:url,width:180,height:180}); }
+
+  /* ======= QR de tienda ======= */
+  function renderStoreQR(){ const el = document.getElementById('qrStore'); el.innerHTML=''; const url = location.href; const qdiv = document.createElement('div'); el.appendChild(qdiv); new QRCode(qdiv,{text:url,width:120,height:120}); }
+
+  /* ======= Admin panel ======= */
+  function openAdmin(){ document.getElementById('adminModal').style.display='block'; renderAdmin(); }
+  function closeAdmin(){ document.getElementById('adminModal').style.display='none'; }
+  function renderAdmin(){ document.getElementById('adminProductList').innerHTML=''; state.products.forEach(p=>{ const tr = document.createElement('div'); tr.style.display='flex'; tr.style.justifyContent='space-between'; tr.style.alignItems='center'; tr.style.padding='6px 0'; tr.innerHTML = `<div><strong>${p.name}</strong><div class="small">S/ ${p.price.toFixed(2)} · Stock: ${p.stock} · Vistas: ${p.views||0} · Ventas: ${p.purchases||0}</div></div><div style="display:flex;gap:6px"><button class="btn ghost" onclick="editProductInline(${p.id})">Editar</button><button class="btn ghost" onclick="deleteProduct(${p.id})">Eliminar</button></div>`; document.getElementById('adminProductList').appendChild(tr); }); document.getElementById('statVisits').textContent = state.metrics.visits; document.getElementById('statSales').textContent = state.metrics.sales; document.getElementById('statProducts').textContent = state.products.length; }
+
+  function exportData(){ const data = JSON.stringify(state, null, 2); const blob = new Blob([data], {type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download = 'bhriface_data.json'; a.click(); URL.revokeObjectURL(url); }
+  function importDataPrompt(){ const ip = document.createElement('input'); ip.type='file'; ip.accept='application/json'; ip.onchange = e=>{ const f = e.target.files[0]; const fr = new FileReader(); fr.onload = ev=>{ try{ state = JSON.parse(ev.target.result); saveState(); closeAdmin(); alert('Importado!'); }catch(err){ alert('JSON inválido') } }; fr.readAsText(f); }; ip.click(); }
+
+  /* ======= Misc utilities ======= */
+  function updateMetricsUI(){ document.getElementById('visitorsNow').textContent = state.metrics.visits; document.getElementById('salesToday').textContent = state.metrics.sales; const conv = state.metrics.visits? ((state.metrics.sales/state.metrics.visits)*100).toFixed(1) : 0; document.getElementById('convRate').textContent = conv + '%'; document.getElementById('visCount').textContent = state.metrics.visits; renderStoreQR(); }
+
+  function renderAll(){ applyFilters(); renderCart(); renderAdmin(); updateMetricsUI(); }
+
+  function saveAndRender(){ saveState(); renderAll(); }
+
+  function loadSample(){ // agrega productos demo si no hay
+    if(state.products.length>0) return;
+    const samples = [
+      {name:'Zapatillas Urbanas',price:129.9,stock:12,cat:'Calzado',img:'https://via.placeholder.com/800x600/ffb6d9/000?text=Zapatillas'},
+      {name:'Blusa Floral',price:59.5,stock:20,cat:'Ropa Mujer',img:'https://via.placeholder.com/800x600/ffd9ec/000?text=Blusa'},
+      {name:'Set de Ollas 7 Piezas',price:199.0,stock:6,cat:'Hogar',img:'https://via.placeholder.com/800x600/ffeef8/000?text=Ollas'},
+      {name:'Labial Matte',price:29.9,stock:50,cat:'Belleza',img:'https://via.placeholder.com/800x600/ffc0df/000?text=Labial'},
+      {name:'Polo Hombre Casual',price:39.9,stock:10,cat:'Ropa Hombre',img:'https://via.placeholder.com/800x600/ffd0e8/000?text=Polo'}
+    ];
+    samples.forEach(s=>pushProduct(s.name,s.price,s.stock,s.cat,s.img)); saveState(); }
+
+  /* ======= Init / load ======= */
+  function init(){ loadState(); // if empty, load sample
+    if(!state.products || state.products.length===0) loadSample(); renderAll(); // simula visitas crecientes
+    setInterval(()=>{ state.metrics.visits += Math.floor(Math.random()*6); if(Math.random()<0.05) state.metrics.sales++; saveState(); updateMetricsUI(); },15000);
+    // handle product deep link
+    if(location.hash.startsWith('#product=')){ const id = Number(location.hash.replace('#product=','')); setTimeout(()=>{ viewProduct(id); },500); }
+  }
+
+  /* ======= Sharing / QR helper ======= */
+  function downloadCatalog(){ exportData(); }
+
+  /* ======= Init call ======= */
+  init();
+
+  // expose some functions for console/debug
+  window.addToCart = addToCart; window.openAdmin = openAdmin; window.addProductFromSidebar = addProductFromSidebar; window.loadSample = loadSample;
+</script>
+</body>
+</html>
